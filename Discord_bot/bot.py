@@ -1,6 +1,7 @@
 import discord
 import responses
 import pymongo
+import datetime
 
 client = pymongo.MongoClient("mongodb+srv://discordroll:check@discordroll.ej9jzg7.mongodb.net/?retryWrites=true&w=majority")
 db = client.users
@@ -9,18 +10,21 @@ print(db)
 
 async def send_message(message, user_message, is_private):
     try:
-        response = responses.get_response(user_message)
-        await message.author.send(response) if is_private else await message.channel.send(response)
-        print(db.server_messages_log.find_one({'id': message.author.id}))
-        if db.server_messages_log.find_one({'id': message.author.id}) == None: #Проверка на пользователя в базе данных
-            print(f'New user {message.author} Added')
-            db.server_messages_log.insert_one({"id": message.author.id,"balance": responses.balance})  # Добавляем в коллекцию server_message_log, одну запись
+        time =  datetime.datetime.utcnow()
+        print(type(time))
+        #response = responses.get_response(user_message)
+        #await message.author.send(response) if is_private else await message.channel.send(response)
+        name = str(message.author)
+        #print(db.users.find_one({'name': name}))
+        if db.users.find_one({'name': name}) == None: #Проверка на пользователя в базе данных
+            print(f'New user {name} Added')
+            db.users.insert_one({"name": name,"balance": responses.balance, "CreatedAt": time})  # Добавляем в коллекцию server_message_log, одну запись
 
         else:
-            print(f'Balance of user {message.author} was updated')
-            wallet = db.server_messages_log.find_one({'id': message.author.id}).get('balance')
+            print(f'Balance of user {name} was updated')
+            wallet = db.users.find_one({'name': name}).get('balance')
             print(type(wallet), 'Счёт')
-            db.server_messages_log.update_one({"id": message.author.id}, {"$set": {"balance":  cashing(wallet, message)}}) #Обновление баланса пользователя
+            db.users.update_one({"name": name}, {"$set": {"balance":  cashing(wallet, message), "updatedAt": time}}) #Обновление баланса пользователя
     except Exception as e:
         print(e)
 
